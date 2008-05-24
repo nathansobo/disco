@@ -258,18 +258,12 @@ Screw.Unit(function() {
             subview('subview', subview_template);
           });
         }
-        console.debug("hi");
 
         var view = builder.to_view();
-        console.debug("hi");
 
         view.find("div.bar").trigger('click');
         expect(callback_data).to(equal, data);
         expect(callback_view).to(equal, view.subview);
-        
-        console.debug("hi");
-        
-
       });
 
       it("works when no data is provided", function() {
@@ -296,6 +290,23 @@ Screw.Unit(function() {
         var view = builder.to_view();
         view.trigger('click');
         expect(callback_view).to(equal, view);
+      });
+
+      it("works on the first of several root-level elements, applying ONLY to element", function() {
+        var times_called = 0;
+        with(builder) {
+          div({'class': "foo"}).bind("click", function(event, view) {
+            times_called++;
+          });
+          div({'class': "bar"});
+          div({'class': "baz"});
+        }
+
+        var view = builder.to_view();
+        view.eq(0).trigger('click');
+        view.eq(1).trigger('click');
+        view.eq(2).trigger('click');
+        expect(times_called).to(equal, 1);
       });
     });
     
