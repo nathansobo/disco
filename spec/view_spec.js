@@ -1,11 +1,11 @@
 require("/specs/spec_helper");
 
 Screw.Unit(function() {
-  describe("View", function() {
+  describe("Disco.View", function() {
     var builder;
     before(function() {
       $('#screw_unit_content').html("");
-      builder = new View();
+      builder = new Disco.View();
     });
 
     describe("#tag", function() {
@@ -82,7 +82,7 @@ Screw.Unit(function() {
 
     describe(".build", function() {
       it("when passed a function, calls the function with a builder and returns a view", function() {
-        var view = View.build(function(builder) {
+        var view = Disco.View.build(function(builder) {
           with(builder) {
             div({'class': "foo"}, function() {
               div({'class': "bar"});
@@ -117,7 +117,7 @@ Screw.Unit(function() {
         }
 
         before(function() {
-          view = View.build(template);
+          view = Disco.View.build(template);
         });
 
         it("returns a view wrapping the HTML specified in the template's content method", function() {
@@ -177,7 +177,7 @@ Screw.Unit(function() {
 
       before(function() {
         initialization_order = [];
-        view = View.build(function(builder) {
+        view = Disco.View.build(function(builder) {
           with(builder) {
             div({'class': "foo"}, function() {
               subview('subview', template_1);
