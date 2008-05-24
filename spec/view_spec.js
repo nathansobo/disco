@@ -180,29 +180,60 @@ Screw.Unit(function() {
         }
       }
 
-      before(function() {
-        initialization_order = [];
-        view = Disco.View.build(function(builder) {
-          with(builder) {
-            div({'class': "foo"}, function() {
-              subview('subview', template_1);
-            });
-          }
+      describe("within a view that wraps a single element", function() {
+        before(function() {
+          initialization_order = [];
+          view = Disco.View.build(function(builder) {
+            with(builder) {
+              div({'class': "foo"}, function() {
+                subview('subview', template_1);
+              });
+            }
+          });
+        });
+
+        it("causes a jQuery wrapped version of the content of the given template to be assigned to the given name on the parent view", function() {
+          expect(view.subview).to(match_selector, 'div.foo > div.bar');
+          expect(view.subview.length).to(equal, 1);
+          expect(view.subview.subview).to(match_selector, 'div.foo > div.bar > span.baz');
+          expect(view.subview.subview.length).to(equal, 1);
+        });
+
+        it("attaches the methods specified in each subview template to the constructed view object", function() {
+          expect(view.subview.foo()).to(equal, "bar");
+          expect(view.subview.subview.baz()).to(equal, "bop");
+        });
+
+        it("calls after initialize on each view object if it exists, starting with the lowest subview first", function() {
+          expect(initialization_order).to(equal, [view.subview.subview, view.subview]);
         });
       });
 
-      it("causes a jQuery wrapped version of the content of the given template to be assigned to the given name on the parent view", function() {
-        expect(view.subview).to(match_selector, 'div.foo > div.bar');
-        expect(view.subview.subview).to(match_selector, 'div.foo > div.bar > span.baz');
-      });
+      describe("within a view that wraps multiple elements", function() {
+        before(function() {
+          initialization_order = [];
+          view = Disco.View.build(function(builder) {
+            with(builder) {
+              div({'class': "sibling"}, function() {
+                div(function() {
+                  div(function() {
+                    div();
+                  });
+                })
+              });
+              div({'class': "foo"}, function() {
+                subview('subview', template_1);
+              });
+            }
+          });
+        });
 
-      it("attaches the methods specified in each subview template to the constructed view object", function() {
-        expect(view.subview.foo()).to(equal, "bar");
-        expect(view.subview.subview.baz()).to(equal, "bop");
-      });
-
-      it("calls after initialize on each view object if it exists, starting with the lowest subview first", function() {
-        expect(initialization_order).to(equal, [view.subview.subview, view.subview]);
+        it("causes a jQuery wrapped version of ONLY the content of the given template to be assigned to the given name on the parent view", function() {
+          expect(view.subview).to(match_selector, 'div.foo > div.bar');
+          expect(view.subview.length).to(equal, 1);
+          expect(view.subview.subview).to(match_selector, 'div.foo > div.bar > span.baz');
+          expect(view.subview.subview.length).to(equal, 1);
+        });
       });
     });
 
@@ -227,12 +258,17 @@ Screw.Unit(function() {
             subview('subview', subview_template);
           });
         }
+        console.debug("hi");
 
         var view = builder.to_view();
+        console.debug("hi");
 
         view.find("div.bar").trigger('click');
         expect(callback_data).to(equal, data);
         expect(callback_view).to(equal, view.subview);
+        
+        console.debug("hi");
+        
 
       });
 
