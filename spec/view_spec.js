@@ -94,6 +94,11 @@ Screw.Unit(function() {
         expect(view).to(contain_selector, 'div.bar');
       });
 
+      it("when passed a function that renders no content to the builder, returns the empty string instead of the view", function() {
+        var view = Disco.View.build(function(builder) { /* noop */});
+        expect(view).to(equal, "");
+      });
+
       describe("when passed a template", function() {
         var view;
         var template = {
