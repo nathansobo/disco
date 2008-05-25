@@ -155,9 +155,15 @@ Screw.Unit(function() {
       Widget = function Widget() {};
       Disco.Model.register('/widgets', Widget);
       Widget.has_many('gadgets');
+      Widget.has_one('sprocket');
 
       Gadget = function Gadget() {};
       Disco.Model.register('/gadgets', Gadget);
+      Gadget.belongs_to('widget');
+
+      Sprocket = function Sprocket() {};
+      Disco.Model.register('/sprockets', Sprocket);
+      Sprocket.belongs_to('widget');
 
       Disco.Model.repository = {
         Widget: {
@@ -173,7 +179,6 @@ Screw.Unit(function() {
             part_number: 42
           })
         },
-
         Gadget: {
           2: Gadget.build({
             id: 1,
@@ -195,6 +200,18 @@ Screw.Unit(function() {
             price: 20,
             widget_id: 2
           })
+        },
+        Sprocket: {
+          1: Sprocket.build({
+            id: 1,
+            name: "Slinky",
+            widget_id: 1
+          }),
+          2: Sprocket.build({
+            id: 2,
+            name: "Erector Set",
+            widget_id: 99
+          })
         }
       };
 
@@ -212,24 +229,26 @@ Screw.Unit(function() {
     after(function() {
       delete Widget;
       delete Gadget;
+      delete Sprocket;
 
       Disco.Model.repository = {};
     });
 
 
     describe("a has_many association", function() {
+      var widget;
       before(function() {
-        expect(Gadget.find_all({widget_id: 1})).to_not(be_empty);
+        widget = Widget.find(1);
       });
 
       it("returns an array of the associated objects", function() {
-        expect(Widget.find(1).gadgets()).to(equal, Gadget.find_all({widget_id: 1}));
+        expect(widget.gadgets()).to(equal, Gadget.find_all({widget_id: 1}));
       });
 
       describe(".each", function() {
         it("iterates over the items returned by the association", function() {
           var eached = [];
-          Widget.find(1).gadgets.each(function(gadget) {
+          widget.gadgets.each(function(gadget) {
             eached.push(gadget);
           })
           expect(eached).to(equal, Gadget.find_all({widget_id: 1}));
@@ -237,12 +256,39 @@ Screw.Unit(function() {
       });
     });
 
+    describe("a belongs_to association", function() {
+      var gadget;
+      before(function() {
+        gadget = Gadget.find(2);
+      });
+
+      it("returns the object to which the foreign key points", function() {
+        expect(gadget.widget()).to(equal, Widget.find(gadget.widget_id));
+      });
+    });
+
+    describe("a has_one association", function() {
+      var widget;
+      before(function() {
+        widget = Widget.find(1);
+      });
+
+      it("returns the object with a foreign key to the owner of the association", function() {
+        expect(widget.sprocket()).to(equal, Sprocket.find({widget_id: widget.id}));
+      });
+    });
+
     describe(".find", function() {
-      it("finds an object for the constructor in the repository by the given id", function() {
+      it("when passed an id, finds an object in the repository with that id", function() {
         expect(Widget.find(1)).to(equal, Disco.Model.repository.Widget[1])
         expect(Widget.find(99)).to(equal, Disco.Model.repository.Widget[99])
         expect(Gadget.find(2)).to(equal, Disco.Model.repository.Gadget[2])
         expect(Gadget.find(33)).to(equal, Disco.Model.repository.Gadget[33])
+      });
+
+      it("when passed a conditions hash, finds the first object in the repository that meets them", function() {
+        var widget = Widget.find(1);
+        expect(Widget.find({part_number: widget.part_number})).to(equal, widget);
       });
     });
 
