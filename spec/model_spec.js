@@ -137,16 +137,21 @@ Screw.Unit(function() {
     before(function() {
       Car = function Car() {};
       Disco.Model.register('/cars', Car);
-      Car.has_many('passengers');
       Car.has_one('driver');
-
-      Passenger = function Passenger() {};
-      Disco.Model.register('/passengers', Passenger);
-      Passenger.belongs_to('car');
+      Car.has_many('passengers');
+      Car.has_many_through('opinions', 'passengers');
 
       Driver = function Driver() {};
       Disco.Model.register('/drivers', Driver);
       Driver.belongs_to('car');
+      
+      Passenger = function Passenger() {};
+      Disco.Model.register('/passengers', Passenger);
+      Passenger.belongs_to('car');
+      Passenger.belongs_to('opinion');
+
+      Opinion = function Opinion() {};
+      Disco.Model.register('/opinions', Opinion);
 
       Disco.Model.repository = {
         Car: {
@@ -162,28 +167,6 @@ Screw.Unit(function() {
             color: 'aqua'
           })
         },
-        Passenger: {
-          2: Passenger.build({
-            id: 1,
-            car_id: 1,
-            age: 25,
-            gender: 'male'
-          }),
-
-          33: Passenger.build({
-            id: 1,
-            car_id: 1,
-            age: 25,
-            gender: 'male'
-          }),
-
-          44: Passenger.build({
-            id: 1,
-            car_id: 2,
-            age: 31,
-            gender: 'female'
-          })
-        },
         Driver: {
           1: Driver.build({
             id: 1,
@@ -194,6 +177,43 @@ Screw.Unit(function() {
             id: 2,
             car_id: 99,
             name: "Barbara"
+          })
+        },
+        Passenger: {
+          2: Passenger.build({
+            id: 1,
+            car_id: 1,
+            opinion_id: 1,
+            age: 25,
+            gender: 'male'
+          }),
+          33: Passenger.build({
+            id: 1,
+            car_id: 1,
+            opinion_id: 2,
+            age: 25,
+            gender: 'male'
+          }),
+          44: Passenger.build({
+            id: 1,
+            car_id: 2,
+            opinion_id: 3,
+            age: 31,
+            gender: 'female'
+          })
+        },
+        Opinion: {
+          1: Opinion.build({
+            id: 1,
+            body: "We should turn left"
+          }),
+          2: Opinion.build({
+            id: 2,
+            body: "We should turn right"
+          }),
+          3: Opinion.build({
+            id: 3,
+            body: "You're driving too fast"
           })
         }
       };
@@ -214,50 +234,49 @@ Screw.Unit(function() {
     });
 
 
-    describe("a has_many association", function() {
-      var car;
+    describe("associations", function() {
+      var car, passenger;
+
       before(function() {
         car = Car.find(1);
-      });
-
-      it("returns an array of the associated objects", function() {
-        expect(car.passengers()).to(equal, Passenger.find_all({car_id: 1}));
-      });
-
-      describe(".each", function() {
-        it("iterates over the items returned by the association", function() {
-          var eached = [];
-          car.passengers.each(function(passenger) {
-            eached.push(passenger);
-          })
-          expect(eached).to(equal, Passenger.find_all({car_id: 1}));
-        });
-      });
-    });
-
-    describe("a has_many_through association", function() {
-
-    });
-
-    describe("a belongs_to association", function() {
-      var passenger;
-      before(function() {
         passenger = Passenger.find(2);
       });
 
-      it("returns the object to which the foreign key points", function() {
-        expect(passenger.car()).to(equal, Car.find(passenger.car_id));
-      });
-    });
+      describe("a has_many association", function() {
+        it("returns an array of the associated objects", function() {
+          expect(car.passengers()).to(equal, Passenger.find_all({car_id: 1}));
+        });
 
-    describe("a has_one association", function() {
-      var car;
-      before(function() {
-        car = Car.find(1);
+        describe(".each", function() {
+          it("iterates over the items returned by the association", function() {
+            var eached = [];
+            car.passengers.each(function(passenger) {
+              eached.push(passenger);
+            })
+            expect(eached).to(equal, Passenger.find_all({car_id: 1}));
+          });
+        });
       });
 
-      it("returns the object with a foreign key to the owner of the association", function() {
-        expect(car.driver()).to(equal, Driver.find({car_id: car.id}));
+      describe("a has_many_through association", function() {
+        it("returns an array of the associated objects mapped through the through association", function() {
+          var expected_objects = Passenger.find_all({car_id: 1}).collect(function(passenger) {
+            return passenger.opinion();
+          });
+          expect(car.opinions()).to(equal, expected_objects);
+        });
+      });
+
+      describe("a belongs_to association", function() {
+        it("returns the object to which the foreign key points", function() {
+          expect(passenger.car()).to(equal, Car.find(passenger.car_id));
+        });
+      });
+
+      describe("a has_one association", function() {
+        it("returns the object with a foreign key to the owner of the association", function() {
+          expect(car.driver()).to(equal, Driver.find({car_id: car.id}));
+        });
       });
     });
 
@@ -286,6 +305,19 @@ Screw.Unit(function() {
         expect(expected_objects.length > 1).to(be_true);
 
         expect(Passenger.find_all({gender: 'male', age: 25})).to(equal, expected_objects);
+      });
+
+      describe(".collect", function() {
+        it("maps a function over the results of a .find_all", function() {
+          var expected_ages = [];
+          Passenger.each(function(passenger) {
+            if (passenger.age == 25) expected_ages.push(passenger.age);
+          });
+
+          expect(Passenger.find_all({age: 25}).collect(function(passenger) {
+            return passenger.age;
+          })).to(equal, expected_ages);
+        });
       });
     });
 
