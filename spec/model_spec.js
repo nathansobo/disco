@@ -1,17 +1,17 @@
 require("/specs/spec_helper");
 
 Screw.Unit(function() {
-  describe("Model", function() {
+  describe("Disco.Model", function() {
     describe(".register", function() {
       describe("when passed a collection resource's url", function() {
         var constructor;
 
         before(function() {
-          constructor = Model.register('/widgets');
+          constructor = Disco.Model.register('/widgets');
         });
 
-        it("creates a whose prototype is an instance of Model", function() {
-          expect(constructor.prototype instanceof Model).to(equal, true);
+        it("creates a whose prototype is an instance of Disco.Model", function() {
+          expect(constructor.prototype instanceof Disco.Model).to(equal, true);
         });
 
         it("creates a constructor with the given resource url", function() {
@@ -25,12 +25,12 @@ Screw.Unit(function() {
 
         before(function() {
           f = function() {};
-          constructor = Model.register('/widgets', f);
+          constructor = Disco.Model.register('/widgets', f);
         });
 
         it("sets the given constructor function's prototype to an instance of model and returns it", function() {
           expect(constructor).to(equal, f);
-          expect(constructor.prototype instanceof Model).to(equal, true);
+          expect(constructor.prototype instanceof Disco.Model).to(equal, true);
         });
 
         it("sets the constructor's resource url to the given url", function() {
@@ -45,12 +45,12 @@ Screw.Unit(function() {
 
       before(function() {
         Widget = function Widget() {};
-        Model.register('/widgets', Widget);
+        Disco.Model.register('/widgets', Widget);
 
         Gadget = function Gadget() {};
-        Model.register('/gadgets', Gadget);
+        Disco.Model.register('/gadgets', Gadget);
 
-        Model.repository = {
+        Disco.Model.repository = {
           Widget: {
             1: Widget.build({
               'maker': "China",
@@ -96,14 +96,14 @@ Screw.Unit(function() {
       after(function() {
         delete Widget;
         delete Gadget;
-        Model.repository = {};
+        Disco.Model.repository = {};
       });
 
       it("creates objects that don't yet exist in the given dataset", function() {
         expect(Widget.find(99)).to(be_null);
         expect(Gadget.find(101)).to(be_null);
 
-        Model.merge(dataset);
+        Disco.Model.merge(dataset);
 
         var widget_99 = Widget.find(99);
         expect(widget_99.id).to(equal, 99);
@@ -126,7 +126,7 @@ Screw.Unit(function() {
           widget_99 = Widget.find(99);
         })
 
-        Model.merge(dataset);
+        Disco.Model.merge(dataset);
 
         expect(widget_99).to(equal, Widget.find(99))
         expect(gadget_101).to(equal, Gadget.find(101))
@@ -134,7 +134,7 @@ Screw.Unit(function() {
 
       it("throws an exception if a model's constructor is not registered", function() {
         try {
-          Model.merge({
+          Disco.Model.merge({
             Bogus: {
               1: {
                 name: "Bill OReilly"
@@ -142,24 +142,30 @@ Screw.Unit(function() {
             }
           });
         } catch(message) {
-          expect(message).to(equal, "constructor 'Bogus' not registered with Model");
+          expect(message).to(equal, "constructor 'Bogus' not registered with Disco.Model");
         }
       });
     });
   });
 
-  describe("A registered Model constructor", function() {
+  describe("A registered Disco.Model constructor", function() {
     var all_widgets, all_gadgets;
 
     before(function() {
       Widget = function Widget() {};
-      Model.register('/widgets', Widget);
+      Disco.Model.register('/widgets', Widget);
       Widget.has_many('gadgets');
+      Widget.has_one('sprocket');
 
       Gadget = function Gadget() {};
-      Model.register('/gadgets', Gadget);
+      Disco.Model.register('/gadgets', Gadget);
+      Gadget.belongs_to('widget');
 
-      Model.repository = {
+      Sprocket = function Sprocket() {};
+      Disco.Model.register('/sprockets', Sprocket);
+      Sprocket.belongs_to('widget');
+
+      Disco.Model.repository = {
         Widget: {
           1: Widget.build({
             id: 1,
@@ -173,7 +179,6 @@ Screw.Unit(function() {
             part_number: 42
           })
         },
-
         Gadget: {
           2: Gadget.build({
             id: 1,
@@ -195,41 +200,55 @@ Screw.Unit(function() {
             price: 20,
             widget_id: 2
           })
+        },
+        Sprocket: {
+          1: Sprocket.build({
+            id: 1,
+            name: "Slinky",
+            widget_id: 1
+          }),
+          2: Sprocket.build({
+            id: 2,
+            name: "Erector Set",
+            widget_id: 99
+          })
         }
       };
 
       all_widgets = [];
-      for (var id in Model.repository.Widget) {
-        all_widgets.push(Model.repository.Widget[id]);
+      for (var id in Disco.Model.repository.Widget) {
+        all_widgets.push(Disco.Model.repository.Widget[id]);
       }
 
       all_gadgets = [];
-      for (var id in Model.repository.Gadget) {
-        all_gadgets.push(Model.repository.Gadget[id]);
+      for (var id in Disco.Model.repository.Gadget) {
+        all_gadgets.push(Disco.Model.repository.Gadget[id]);
       }
     });
 
     after(function() {
       delete Widget;
       delete Gadget;
+      delete Sprocket;
 
-      Model.repository = {};
+      Disco.Model.repository = {};
     });
 
 
     describe("a has_many association", function() {
+      var widget;
       before(function() {
-        expect(Gadget.find_all({widget_id: 1})).to_not(be_empty);
+        widget = Widget.find(1);
       });
 
       it("returns an array of the associated objects", function() {
-        expect(Widget.find(1).gadgets()).to(equal, Gadget.find_all({widget_id: 1}));
+        expect(widget.gadgets()).to(equal, Gadget.find_all({widget_id: 1}));
       });
 
       describe(".each", function() {
         it("iterates over the items returned by the association", function() {
           var eached = [];
-          Widget.find(1).gadgets.each(function(gadget) {
+          widget.gadgets.each(function(gadget) {
             eached.push(gadget);
           })
           expect(eached).to(equal, Gadget.find_all({widget_id: 1}));
@@ -237,12 +256,39 @@ Screw.Unit(function() {
       });
     });
 
+    describe("a belongs_to association", function() {
+      var gadget;
+      before(function() {
+        gadget = Gadget.find(2);
+      });
+
+      it("returns the object to which the foreign key points", function() {
+        expect(gadget.widget()).to(equal, Widget.find(gadget.widget_id));
+      });
+    });
+
+    describe("a has_one association", function() {
+      var widget;
+      before(function() {
+        widget = Widget.find(1);
+      });
+
+      it("returns the object with a foreign key to the owner of the association", function() {
+        expect(widget.sprocket()).to(equal, Sprocket.find({widget_id: widget.id}));
+      });
+    });
+
     describe(".find", function() {
-      it("finds an object for the constructor in the repository by the given id", function() {
-        expect(Widget.find(1)).to(equal, Model.repository.Widget[1])
-        expect(Widget.find(99)).to(equal, Model.repository.Widget[99])
-        expect(Gadget.find(2)).to(equal, Model.repository.Gadget[2])
-        expect(Gadget.find(33)).to(equal, Model.repository.Gadget[33])
+      it("when passed an id, finds an object in the repository with that id", function() {
+        expect(Widget.find(1)).to(equal, Disco.Model.repository.Widget[1])
+        expect(Widget.find(99)).to(equal, Disco.Model.repository.Widget[99])
+        expect(Gadget.find(2)).to(equal, Disco.Model.repository.Gadget[2])
+        expect(Gadget.find(33)).to(equal, Disco.Model.repository.Gadget[33])
+      });
+
+      it("when passed a conditions hash, finds the first object in the repository that meets them", function() {
+        var widget = Widget.find(1);
+        expect(Widget.find({part_number: widget.part_number})).to(equal, widget);
       });
     });
 
@@ -329,11 +375,11 @@ Screw.Unit(function() {
 
     describe(".fetch", function() {
       before(function() {
-        Model.use_real_fetch();
+        Disco.Model.use_real_fetch();
       });
 
       after(function() {
-        Model.use_fake_fetch();
+        Disco.Model.use_fake_fetch();
       });
 
       it("sends a GET request to the .resource_url and merges the resulting dataset", function() {
