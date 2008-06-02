@@ -3,33 +3,16 @@ require("/specs/spec_helper");
 Screw.Unit(function() {
   describe("Disco.Model", function() {
     describe(".register", function() {
-      describe("when passed a collection resource's url", function() {
-        var constructor;
-
-        before(function() {
-          constructor = Disco.Model.register('/widgets');
-        });
-
-        it("creates a whose prototype is an instance of Disco.Model", function() {
-          expect(constructor.prototype instanceof Disco.Model).to(equal, true);
-        });
-
-        it("creates a constructor with the given resource url", function() {
-          expect(constructor.resource_url).to(equal, '/widgets');
-        });
-      });
-
       describe("when passed a collection resource's url and a constructor function", function() {
-        var f;
+        Car = function Car() {};
         var constructor;
 
         before(function() {
-          f = function() {};
-          constructor = Disco.Model.register('/widgets', f);
+          constructor = Disco.Model.register('/widgets', Car);
         });
 
         it("sets the given constructor function's prototype to an instance of model and returns it", function() {
-          expect(constructor).to(equal, f);
+          expect(constructor).to(equal, Car);
           expect(constructor.prototype instanceof Disco.Model).to(equal, true);
         });
 
@@ -44,92 +27,92 @@ Screw.Unit(function() {
       var dataset;
 
       before(function() {
-        Widget = function Widget() {};
-        Disco.Model.register('/widgets', Widget);
+        Car = function Car() {};
+        Disco.Model.register('/cars', Car);
 
-        Gadget = function Gadget() {};
-        Disco.Model.register('/gadgets', Gadget);
+        Passenger = function Passenger() {};
+        Disco.Model.register('/passengers', Passenger);
 
         Disco.Model.repository = {
-          Widget: {
-            1: Widget.build({
-              'maker': "China",
-              'part_number': 5
+          Car: {
+            1: Car.build({
+              'maker': "Ford",
+              'color': 'red'
             })
           },
 
-          Gadget: {
-            1: Gadget.build({
-              'size': "big",
-              'use': "dancing"
+          Passenger: {
+            1: Passenger.build({
+              'name': "Ernie",
+              'age': 13
             })
           }
         }
 
         dataset = {
-          'Widget': {
+          'Car': {
             1: {
-              'maker': "China",
-              'part_number': 5
+              'maker': "Toyota",
+              'color': 'blue'
             },
 
             99: {
-              'maker': "Germany",
-              'part_number': 34
+              'maker': "Tesla",
+              'color': 'green'
             }
           },
 
-          'Gadget': {
+          'Passenger': {
             1: {
-              'size': "big",
-              'use': "none"
+              'name': "Johan",
+              'age': 19
             },
 
             101: {
-              'size': "small",
-              'use': "cutting"
+              'name': "Burt",
+              'age': 23
             }
           }
         };
       });
 
       after(function() {
-        delete Widget;
-        delete Gadget;
+        delete Car;
+        delete Passenger;
         Disco.Model.repository = {};
       });
 
       it("creates objects that don't yet exist in the given dataset", function() {
-        expect(Widget.find(99)).to(be_null);
-        expect(Gadget.find(101)).to(be_null);
+        expect(Car.find(99)).to(be_null);
+        expect(Passenger.find(101)).to(be_null);
 
         Disco.Model.merge(dataset);
 
-        var widget_99 = Widget.find(99);
+        var widget_99 = Car.find(99);
         expect(widget_99.id).to(equal, 99);
-        expect(widget_99.maker).to(equal, "Germany");
-        expect(widget_99.part_number).to(equal, 34);
+        expect(widget_99.maker).to(equal, "Tesla");
+        expect(widget_99.color).to(equal, 'green');
 
-        var gadget_101 = Gadget.find(101);
-        expect(gadget_101.id).to(equal, 101);
-        expect(gadget_101.size).to(equal, "small");
-        expect(gadget_101.use).to(equal, "cutting");
+        var passenger_101 = Passenger.find(101);
+        expect(passenger_101.id).to(equal, 101);
+        expect(passenger_101.name).to(equal, "Burt");
+        expect(passenger_101.age).to(equal, 23);
       });
 
       it("triggers the 'create' callback on the appropriate constructors after all objects have been inserted", function() {
-        var widget_99, gadget_101;
+        var widget_99, passenger_101;
 
-        Widget.create(function(widget) {
-          gadget_101 = Gadget.find(101);
+        Car.create(function(car) {
+          passenger_101 = Passenger.find(101);
         });
-        Gadget.create(function(gadget) {
-          widget_99 = Widget.find(99);
+        Passenger.create(function(passenger) {
+          widget_99 = Car.find(99);
         })
 
         Disco.Model.merge(dataset);
 
-        expect(widget_99).to(equal, Widget.find(99))
-        expect(gadget_101).to(equal, Gadget.find(101))
+        expect(widget_99).to(equal, Car.find(99))
+        expect(passenger_101).to(equal, Passenger.find(101))
       });
 
       it("throws an exception if a model's constructor is not registered", function() {
@@ -149,192 +132,192 @@ Screw.Unit(function() {
   });
 
   describe("A registered Disco.Model constructor", function() {
-    var all_widgets, all_gadgets;
-
+    var all_widgets, all_passengers, Car, Passenger, Driver;
+    
     before(function() {
-      Widget = function Widget() {};
-      Disco.Model.register('/widgets', Widget);
-      Widget.has_many('gadgets');
-      Widget.has_one('sprocket');
+      Car = function Car() {};
+      Disco.Model.register('/cars', Car);
+      Car.has_many('passengers');
+      Car.has_one('driver');
 
-      Gadget = function Gadget() {};
-      Disco.Model.register('/gadgets', Gadget);
-      Gadget.belongs_to('widget');
+      Passenger = function Passenger() {};
+      Disco.Model.register('/passengers', Passenger);
+      Passenger.belongs_to('car');
 
-      Sprocket = function Sprocket() {};
-      Disco.Model.register('/sprockets', Sprocket);
-      Sprocket.belongs_to('widget');
+      Driver = function Driver() {};
+      Disco.Model.register('/drivers', Driver);
+      Driver.belongs_to('car');
 
       Disco.Model.repository = {
-        Widget: {
-          1: Widget.build({
+        Car: {
+          1: Car.build({
             id: 1,
-            maker: 'Mattel',
-            part_number: 4
+            maker: 'Chrysler',
+            color: 'chartruce'
           }),
 
-          99: Widget.build({
+          99: Car.build({
             id: 1,
-            maker: 'Apple',
-            part_number: 42
+            maker: 'Renault',
+            color: 'aqua'
           })
         },
-        Gadget: {
-          2: Gadget.build({
+        Passenger: {
+          2: Passenger.build({
             id: 1,
-            use: 'sunbathing',
-            price: 20,
-            widget_id: 1
+            car_id: 1,
+            age: 25,
+            gender: 'male'
           }),
 
-          33: Gadget.build({
+          33: Passenger.build({
             id: 1,
-            use: 'peace',
-            price: 20,
-            widget_id: 1
+            car_id: 1,
+            age: 25,
+            gender: 'male'
           }),
 
-          44: Gadget.build({
+          44: Passenger.build({
             id: 1,
-            use: 'peace',
-            price: 20,
-            widget_id: 2
+            car_id: 2,
+            age: 31,
+            gender: 'female'
           })
         },
-        Sprocket: {
-          1: Sprocket.build({
+        Driver: {
+          1: Driver.build({
             id: 1,
-            name: "Slinky",
-            widget_id: 1
+            car_id: 1,
+            name: "Nathan"
           }),
-          2: Sprocket.build({
+          2: Driver.build({
             id: 2,
-            name: "Erector Set",
-            widget_id: 99
+            car_id: 99,
+            name: "Barbara"
           })
         }
       };
 
       all_widgets = [];
-      for (var id in Disco.Model.repository.Widget) {
-        all_widgets.push(Disco.Model.repository.Widget[id]);
+      for (var id in Disco.Model.repository.Car) {
+        all_widgets.push(Disco.Model.repository.Car[id]);
       }
 
-      all_gadgets = [];
-      for (var id in Disco.Model.repository.Gadget) {
-        all_gadgets.push(Disco.Model.repository.Gadget[id]);
+      all_passengers = [];
+      for (var id in Disco.Model.repository.Passenger) {
+        all_passengers.push(Disco.Model.repository.Passenger[id]);
       }
     });
 
     after(function() {
-      delete Widget;
-      delete Gadget;
-      delete Sprocket;
-
       Disco.Model.repository = {};
     });
 
 
     describe("a has_many association", function() {
-      var widget;
+      var car;
       before(function() {
-        widget = Widget.find(1);
+        car = Car.find(1);
       });
 
       it("returns an array of the associated objects", function() {
-        expect(widget.gadgets()).to(equal, Gadget.find_all({widget_id: 1}));
+        expect(car.passengers()).to(equal, Passenger.find_all({car_id: 1}));
       });
 
       describe(".each", function() {
         it("iterates over the items returned by the association", function() {
           var eached = [];
-          widget.gadgets.each(function(gadget) {
-            eached.push(gadget);
+          car.passengers.each(function(passenger) {
+            eached.push(passenger);
           })
-          expect(eached).to(equal, Gadget.find_all({widget_id: 1}));
+          expect(eached).to(equal, Passenger.find_all({car_id: 1}));
         });
       });
     });
 
+    describe("a has_many_through association", function() {
+
+    });
+
     describe("a belongs_to association", function() {
-      var gadget;
+      var passenger;
       before(function() {
-        gadget = Gadget.find(2);
+        passenger = Passenger.find(2);
       });
 
       it("returns the object to which the foreign key points", function() {
-        expect(gadget.widget()).to(equal, Widget.find(gadget.widget_id));
+        expect(passenger.car()).to(equal, Car.find(passenger.car_id));
       });
     });
 
     describe("a has_one association", function() {
-      var widget;
+      var car;
       before(function() {
-        widget = Widget.find(1);
+        car = Car.find(1);
       });
 
       it("returns the object with a foreign key to the owner of the association", function() {
-        expect(widget.sprocket()).to(equal, Sprocket.find({widget_id: widget.id}));
+        expect(car.driver()).to(equal, Driver.find({car_id: car.id}));
       });
     });
 
     describe(".find", function() {
       it("when passed an id, finds an object in the repository with that id", function() {
-        expect(Widget.find(1)).to(equal, Disco.Model.repository.Widget[1])
-        expect(Widget.find(99)).to(equal, Disco.Model.repository.Widget[99])
-        expect(Gadget.find(2)).to(equal, Disco.Model.repository.Gadget[2])
-        expect(Gadget.find(33)).to(equal, Disco.Model.repository.Gadget[33])
+        expect(Car.find(1)).to(equal, Disco.Model.repository.Car[1])
+        expect(Car.find(99)).to(equal, Disco.Model.repository.Car[99])
+        expect(Passenger.find(2)).to(equal, Disco.Model.repository.Passenger[2])
+        expect(Passenger.find(33)).to(equal, Disco.Model.repository.Passenger[33])
       });
 
       it("when passed a conditions hash, finds the first object in the repository that meets them", function() {
-        var widget = Widget.find(1);
-        expect(Widget.find({part_number: widget.part_number})).to(equal, widget);
+        var car = Car.find(1);
+        expect(Car.find({color: car.color})).to(equal, car);
       });
     });
 
     describe(".find_all", function() {
       it("returns all objects matching the passed in conditions hash", function() {
         var expected_objects = [];
-        Gadget.each(function(gadget) {
-          if (gadget.price == 20 && gadget.use == 'peace') {
-            expected_objects.push(gadget);
+        Passenger.each(function(passenger) {
+          if (passenger.gender == 'male' && passenger.age == 25) {
+            expected_objects.push(passenger);
           }
         });
         expect(expected_objects.length > 1).to(be_true);
 
-        expect(Gadget.find_all({price: 20, use: 'peace'})).to(equal, expected_objects);
+        expect(Passenger.find_all({gender: 'male', age: 25})).to(equal, expected_objects);
       });
     });
 
     describe(".create", function() {
       it("when called with a function, binds the create callback on the constructor", function() {
         var callback_arg;
-        Widget.create(function(arg) {
+        Car.create(function(arg) {
           callback_arg = arg;
         });
-        Widget.trigger('create', ["foo"]);
+        Car.trigger('create', ["foo"]);
         expect(callback_arg).to(equal, "foo");
       });
 
       it("when called without arguments, sends a create request to the constructor's resource url", function() {
         expect($.ajax_requests).to(be_empty);
-        Widget.create();
+        Car.create();
         expect($.ajax_requests).to(have_length, 1);
         var request = $.ajax_requests.shift()
-        expect(request.url).to(equal, '/widgets');
+        expect(request.url).to(equal, '/cars');
         expect(request.type).to(equal, 'POST');
       });
 
       it("when called with attributes, sends a create request to the constructor's resource url", function() {
         expect($.ajax_requests).to(be_empty);
-        Widget.create({ foo: 'bar', baz: 'bop'});
+        Car.create({ foo: 'bar', baz: 'bop'});
         expect($.ajax_requests).to(have_length, 1);
         var request = $.ajax_requests.shift()
-        expect(request.url).to(equal, '/widgets');
+        expect(request.url).to(equal, '/cars');
         expect(request.type).to(equal, 'POST');
         expect(request.data).to(equal, {
-          'widget[foo]': 'bar',
-          'widget[baz]': 'bop'
+          'car[foo]': 'bar',
+          'car[baz]': 'bop'
         });
       });
 
@@ -343,11 +326,11 @@ Screw.Unit(function() {
         var callback_arg
 
         before(function() {
-          Widget.create(function(widget) {
-            callback_arg = widget;
+          Car.create(function(car) {
+            callback_arg = car;
           })
 
-          Widget.create({ foo: 'bar', baz: 'bop'})
+          Car.create({ foo: 'bar', baz: 'bop'})
           var request = $.ajax_requests.shift()
 
           created_attributes = {
@@ -362,13 +345,13 @@ Screw.Unit(function() {
         });
 
         it("adds an object with the response's 'created' attributes to the repository", function() {
-          var widget = Widget.find(created_attributes.id);
-          expect(widget.foo).to(equal, created_attributes.foo);
-          expect(widget.baz).to(equal, created_attributes.baz);
+          var car = Car.find(created_attributes.id);
+          expect(car.foo).to(equal, created_attributes.foo);
+          expect(car.baz).to(equal, created_attributes.baz);
         });
 
         it("triggers the 'create' callback on the constructor", function() {
-          expect(callback_arg).to(equal, Widget.find(created_attributes.id));
+          expect(callback_arg).to(equal, Car.find(created_attributes.id));
         });
       });
     });
@@ -384,75 +367,75 @@ Screw.Unit(function() {
 
       it("sends a GET request to the .resource_url and merges the resulting dataset", function() {
         expect($.ajax_requests).to(be_empty);
-        Widget.fetch()
+        Car.fetch()
         expect($.ajax_requests).to(have_length, 1);
         var request = $.ajax_requests.shift();
 
-        expect(request.url).to(equal, Widget.resource_url);
+        expect(request.url).to(equal, Car.resource_url);
         expect(request.type).to(equal, 'GET');
 
-        expect(Widget.find(2)).to(be_null);
-        expect(Gadget.find(4)).to(be_null);
+        expect(Car.find(2)).to(be_null);
+        expect(Passenger.find(4)).to(be_null);
 
         request.success(JSON.stringify({
-          'Widget': {
+          'Car': {
             2: {
-              'maker': "Gilette",
-              'part_number': 45
+              'maker': "Mercedes",
+              'color': 'brown'
             }
           },
 
-          'Gadget': {
+          'Passenger': {
             4: {
-              'use': "jumping",
-              'price': 400
+              'age': 31,
+              'gender': 'female'
             }
           }
         }));
 
-        expect(Widget.find(2)).to_not(be_null);
-        expect(Gadget.find(4)).to_not(be_null);
+        expect(Car.find(2)).to_not(be_null);
+        expect(Passenger.find(4)).to_not(be_null);
       });
 
       it("calls the before_merge and after_merge callbacks before and after the merge if they are provided", function() {
         var before_merge, after_merge;
 
-        expect(Widget.find(2)).to(be_null);
-        Widget.fetch({
+        expect(Car.find(2)).to(be_null);
+        Car.fetch({
           before_merge: function() {
-            before_merge = Widget.find(2);
+            before_merge = Car.find(2);
           },
 
           after_merge: function() {
-            after_merge = Widget.find(2);
+            after_merge = Car.find(2);
           }
         });
 
         $.ajax_requests.shift().success(JSON.stringify({
-          'Widget': {
+          'Car': {
             2: {
               'maker': "Death Inc.",
-              'part_number': 23
+              'color': 23
             }
           }
         }));
 
         expect(before_merge).to(be_null);
-        expect(after_merge).to(equal, Widget.find(2));
+        expect(after_merge).to(equal, Car.find(2));
       });
     });
 
     describe(".all", function() {
       it("returns an array of all instances of the constructor in the repository", function() {
-        expect(Widget.all()).to(equal, all_widgets);
+        expect(Car.all()).to(equal, all_widgets);
       });
     });
     
     describe(".each", function() {
       it("executes the given function on every instance of the constructor in the repository", function() {
         var eached = [];
-        Widget.each(function(widget) {
-          eached.push(widget)
+        Car.each(function(car) {
+          eached.push(car)
         })
         expect(eached).to(equal, all_widgets);
       });
@@ -464,21 +447,21 @@ Screw.Unit(function() {
         var object_2;
         var argument_1;
         var argument_2;
-        Widget.bind('foo', function(arg) {
+        Car.bind('foo', function(arg) {
           object_1 = this;
           argument_1 = arg;
         });
 
-        Widget.bind('foo', function(arg) {
+        Car.bind('foo', function(arg) {
           object_2 = this;
           argument_2 = arg;
         });
 
         var arg = new Object();
-        Widget.trigger('foo', [arg]);
+        Car.trigger('foo', [arg]);
 
-        expect(object_1).to(equal, Widget);
-        expect(object_2).to(equal, Widget);
+        expect(object_1).to(equal, Car);
+        expect(object_2).to(equal, Car);
         expect(argument_1).to(equal, arg);
         expect(argument_2).to(equal, arg);
       });
@@ -486,94 +469,94 @@ Screw.Unit(function() {
     
     describe("#fetch", function() {
       it("sends a get request to the instance's resource url and merges the resulting dataset", function() {
-        var widget = Widget.find(1);
+        var car = Car.find(1);
 
         expect($.ajax_requests).to(be_empty);
 
-        widget.fetch();
+        car.fetch();
 
         expect($.ajax_requests).to(have_length, 1);
         var request = $.ajax_requests.shift();
-        expect(request.url).to(equal, "/widgets/1");
+        expect(request.url).to(equal, "/cars/1");
         expect(request.type).to(equal, "GET");
 
-        expect(Gadget.find(3)).to(be_null);
-        expect(Gadget.find(4)).to(be_null);
+        expect(Passenger.find(3)).to(be_null);
+        expect(Passenger.find(4)).to(be_null);
 
         request.success(JSON.stringify({
-          'Gadget': {
+          'Passenger': {
             3: {
-              'use': "coffee",
-              'price': 300
+              'age': "coffee",
+              'gender': 300
             },
 
             4: {
-              'use': "cigarettes",
-              'price': 3
+              'age': "cigarettes",
+              'gender': 3
             }
           }
         }));
 
-        expect(Gadget.find(3)).to_not(be_null);
-        expect(Gadget.find(4)).to_not(be_null);
+        expect(Passenger.find(3)).to_not(be_null);
+        expect(Passenger.find(4)).to_not(be_null);
       });
 
       it("calls the before_merge and after_merge callbacks before and after the merge if they are provided", function() {
         var before_merge, after_merge;
-        var widget = Widget.find(1);
+        var car = Car.find(1);
 
-        expect(Gadget.find(3)).to(be_null);
+        expect(Passenger.find(3)).to(be_null);
 
-        widget.fetch({
+        car.fetch({
           before_merge: function() {
-            before_merge = Gadget.find(3);
+            before_merge = Passenger.find(3);
           },
 
           after_merge: function() {
-            after_merge = Gadget.find(3);
+            after_merge = Passenger.find(3);
           }
         });
 
         $.ajax_requests.shift().success(JSON.stringify({
-          'Gadget': {
+          'Passenger': {
             3: {
-              'use': "coffee",
-              'price': 300
+              'age': "coffee",
+              'gender': 300
             }
           }
         }));
 
         expect(before_merge).to(be_null);
-        expect(after_merge).to(equal, Gadget.find(3));
+        expect(after_merge).to(equal, Passenger.find(3));
       });
     });
     
     describe("#resource_url", function() {
       it("returns the object's id appended to its constructor's resource url", function() {
-        var widget = Widget.find(1);
-        expect(widget.resource_url()).to(equal, "/widgets/1");
+        var car = Car.find(1);
+        expect(car.resource_url()).to(equal, "/cars/1");
       });
     });
 
     describe("#meets_conditions", function() {
-      var gadget;
+      var passenger;
       before(function() {
-        gadget = Gadget.find(2);
+        passenger = Passenger.find(2);
       });
 
       it("returns true if all conditions in the given hash are equal to the object's properties", function() {
-        expect(gadget.meets_conditions({
-          price: gadget.price,
-          use: gadget.use,
-          widget_id: gadget.widget_id}
+        expect(passenger.meets_conditions({
+          gender: passenger.gender,
+          age: passenger.age,
+          car_id: passenger.car_id}
         )).to(be_true);
       });
 
       it("returns false if any of the conditions in the given hash are not equal to one of the object's properties", function() {
-        expect(gadget.meets_conditions({
-          price: gadget.price,
-          use: 'crapola',
-          widget_id: gadget.widget_id}
+        expect(passenger.meets_conditions({
+          gender: passenger.gender,
+          age: 'crapola',
+          car_id: passenger.car_id}
         )).to(be_false);
       });
     });
