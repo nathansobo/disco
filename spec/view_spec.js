@@ -94,6 +94,15 @@ Screw.Unit(function() {
         expect(view).to(contain_selector, 'div.bar');
       });
 
+      it("when passed a function and initial attributes, returns a view with the attributes set", function() {
+        var content = function(builder) {
+          builder.div({'class': "foo"});
+        };
+        var view = Disco.View.build(content, { foo: 'bar', baz: 'quux' });
+        expect(view.foo).to(equal, 'bar');
+        expect(view.baz).to(equal, 'quux');
+      });
+
       it("when passed a function that renders no content to the builder, returns the empty string instead of the view", function() {
         var view = Disco.View.build(function(builder) { /* noop */});
         expect(view).to(equal, "");
@@ -139,7 +148,7 @@ Screw.Unit(function() {
         });
       });
       
-      describe("when passed a template and a hash of instance variables", function() {
+      describe("when passed a template and a hash of instance attributes", function() {
         var view, variables, variables_at_time_of_call;
               
         var template = {
@@ -163,7 +172,7 @@ Screw.Unit(function() {
           variables_at_time_of_call = {};
         });
         
-        it("assigns the variables on the view before after_initialize is called", function() {
+        it("assigns the attributes on the view before after_initialize is called", function() {
           var view = Disco.View.build(template, variables);
           expect(view.foo).to(equal, variables.foo);
           expect(view.baz).to(equal, variables.baz);
