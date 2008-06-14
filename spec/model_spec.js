@@ -1,4 +1,4 @@
-require("/specs/spec_helper");
+//require("/specs/spec_helper");
 
 Screw.Unit(function() {
   describe("Disco.Model", function() {

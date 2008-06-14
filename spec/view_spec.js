@@ -1,4 +1,4 @@
-require("/specs/spec_helper");
+//require("/specs/spec_helper");
 
 Screw.Unit(function() {
   describe("Disco.View", function() {
@@ -66,7 +66,7 @@ Screw.Unit(function() {
       });
     });
 
-    describe("to_view", function() {
+    describe("#to_view", function() {
       it("returns a jQuery wrapped version of the generated XML", function() {
         with(builder) {
           div({'class': "foo"}, function() {
@@ -92,6 +92,15 @@ Screw.Unit(function() {
 
         expect(view).to(match_selector, 'div.foo');
         expect(view).to(contain_selector, 'div.bar');
+      });
+
+      it("when passed a function and initial attributes, returns a view with the attributes set", function() {
+        var content = function(builder) {
+          builder.div({'class': "foo"});
+        };
+        var view = Disco.View.build(content, { foo: 'bar', baz: 'quux' });
+        expect(view.foo).to(equal, 'bar');
+        expect(view.baz).to(equal, 'quux');
       });
 
       it("when passed a function that renders no content to the builder, returns the empty string instead of the view", function() {
@@ -138,6 +147,39 @@ Screw.Unit(function() {
           expect(view.after_initialize_called).to(be_true);
         });
       });
+      
+      describe("when passed a template and a hash of instance attributes", function() {
+        var view, variables, variables_at_time_of_call;
+              
+        var template = {
+          content: function(builder) {
+            builder.div({'class': "foo"});
+          },
+          
+          methods: {
+            after_initialize: function() {
+              variables_at_time_of_call.foo = this.foo;
+              variables_at_time_of_call.baz = this.baz;
+            }
+          }
+        }
+        
+        before(function() {
+          variables = {
+            foo: 'bar',
+            baz: 'quux'
+          };
+          variables_at_time_of_call = {};
+        });
+        
+        it("assigns the attributes on the view before after_initialize is called", function() {
+          var view = Disco.View.build(template, variables);
+          expect(view.foo).to(equal, variables.foo);
+          expect(view.baz).to(equal, variables.baz);
+          expect(variables_at_time_of_call).to(equal, variables);
+        });
+      })
+      
     });
 
     describe("#subview", function() {
