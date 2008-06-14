@@ -285,6 +285,17 @@ Screw.Unit(function() {
             expect(car.thoughts()).to(equal, expected_objects);
           });
         });
+
+        describe(".each", function() {
+          it("iterates over the items returned by the association", function() {
+            var eached = [];
+            car.opinions.each(function(opinion) {
+              eached.push(opinion);
+            })
+            expect(eached).to(equal, car.opinions());
+          });
+
+        });
       });
 
       describe("a belongs_to association", function() {
