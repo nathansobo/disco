@@ -138,8 +138,11 @@ Screw.Unit(function() {
       Car = function Car() {};
       Disco.Model.register('/cars', Car);
       Car.has_one('driver');
-      Car.has_many('passengers');
+      Car.has_many('passengers', {
+        order: 'name'
+      });
       Car.has_many_through('opinions', 'passengers');
+      Car.has_many_through('thoughts', 'passengers', {source: 'opinion'});
 
       Driver = function Driver() {};
       Disco.Model.register('/drivers', Driver);
@@ -149,6 +152,7 @@ Screw.Unit(function() {
       Disco.Model.register('/passengers', Passenger);
       Passenger.belongs_to('car');
       Passenger.belongs_to('opinion');
+      Passenger.belongs_to('thought', { constructor_name: 'Opinion', foreign_key: 'opinion_id' });
 
       Opinion = function Opinion() {};
       Disco.Model.register('/opinions', Opinion);
@@ -185,21 +189,24 @@ Screw.Unit(function() {
             car_id: 1,
             opinion_id: 1,
             age: 25,
-            gender: 'male'
+            gender: 'male',
+            name: 'Gavin'
           }),
           33: Passenger.build({
             id: 1,
             car_id: 1,
             opinion_id: 2,
             age: 25,
-            gender: 'male'
+            gender: 'male',
+            name: 'Bertrand'
           }),
           44: Passenger.build({
             id: 1,
             car_id: 2,
             opinion_id: 3,
-            age: 31,
-            gender: 'female'
+            age: 18,
+            gender: 'female',
+            name: 'Helen'
           })
         },
         Opinion: {
@@ -243,8 +250,8 @@ Screw.Unit(function() {
       });
 
       describe("a has_many association", function() {
-        it("returns an array of the associated objects", function() {
-          expect(car.passengers()).to(equal, Passenger.find_all({car_id: 1}));
+        it("returns an array of the associated objects ordered by the requested attribute", function() {
+          expect(car.passengers()).to(equal, Passenger.find_all({car_id: 1}, {order: 'name'}));
         });
 
         describe(".each", function() {
@@ -253,23 +260,44 @@ Screw.Unit(function() {
             car.passengers.each(function(passenger) {
               eached.push(passenger);
             })
-            expect(eached).to(equal, Passenger.find_all({car_id: 1}));
+            expect(eached).to(equal, Passenger.find_all({car_id: 1}, {order: 'name'}));
           });
         });
       });
 
       describe("a has_many_through association", function() {
-        it("returns an array of the associated objects mapped through the through association", function() {
-          var expected_objects = Passenger.find_all({car_id: 1}).collect(function(passenger) {
+        var expected_objects;
+
+        before(function() {
+          expected_objects = Passenger.find_all({car_id: 1}, {order: 'name'}).collect(function(passenger) {
             return passenger.opinion();
           });
-          expect(car.opinions()).to(equal, expected_objects);
+        });
+
+        describe("with an implicit source name", function() {
+          it("returns an array of the associated objects mapped through the through association", function() {
+            expect(car.opinions()).to(equal, expected_objects);
+          })
+        });
+
+        describe("with an explicit source name", function() {
+          it("returns an array of the association abjects mapped through the through association with a specific source-name", function() {
+            expect(car.thoughts()).to(equal, expected_objects);
+          });
         });
       });
 
       describe("a belongs_to association", function() {
-        it("returns the object to which the foreign key points", function() {
-          expect(passenger.car()).to(equal, Car.find(passenger.car_id));
+        describe("with an implicit class name and foreign key", function() {
+          it("returns the object to which the foreign key points", function() {
+            expect(passenger.car()).to(equal, Car.find(passenger.car_id));
+          });
+        });
+
+        describe("with an explicit constructor name and foreign key", function() {
+          it("returns the object to which the foreign key points", function() {
+            expect(passenger.thought()).to(equal, Opinion.find(passenger.opinion_id));
+          });
         });
       });
 
@@ -295,7 +323,7 @@ Screw.Unit(function() {
     });
 
     describe(".find_all", function() {
-      it("returns all objects matching the passed in conditions hash", function() {
+      it("returns all objects matching the passed in conditions hash, sorted by an optional order column", function() {
         var expected_objects = [];
         Passenger.each(function(passenger) {
           if (passenger.gender == 'male' && passenger.age == 25) {
@@ -303,8 +331,11 @@ Screw.Unit(function() {
           }
         });
         expect(expected_objects.length > 1).to(be_true);
+        expected_objects.sort(function(a, b) {
+          return a.name < b.name ? -1 : 1;
+        })
 
-        expect(Passenger.find_all({gender: 'male', age: 25})).to(equal, expected_objects);
+        expect(Passenger.find_all({gender: 'male', age: 25}, {order: 'name'})).to(equal, expected_objects);
       });
 
       describe(".collect", function() {
